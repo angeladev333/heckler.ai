@@ -2,6 +2,9 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import time
+import pickle
+import pandas as pd
+
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
 
@@ -33,6 +36,13 @@ def isFacingForward(a, b):
 
     return True
 
+# getting ml face model
+with open('body_language.pkl', 'rb') as f:
+    model = pickle.load(f)
+
+mp_drawing = mp.solutions.drawing_utils
+mp_holistic = mp.solutions.holistic
+
 # live video
 cap = cv2.VideoCapture(0)  # default webcam
 
@@ -43,7 +53,7 @@ front_slouch_frames = []
 start_time = 0
 
 # set up media pose instance
-with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as pose:
+with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as pose, mp_holistic.Holistic(min_detection_confidence=0.6, min_tracking_confidence=0.6) as holistic:
     start_time = time.time()
     while cap.isOpened():
         ret, frame = cap.read()  # getting frames (img) from video feed
@@ -53,15 +63,18 @@ with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as
         image.flags.writeable = False  # save memory by setting to not writeable
 
         # Make detection
-        results = pose.process(image)
+        results_pose = pose.process(image)
+        results_face = holistic.process(image)
 
         # Recolor back to BGR
         image.flags.writeable = True
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)  # reorder to bgr to put it back into opencv
 
+
+
         # extract landmarks
         try:
-            landmarks = results.pose_landmarks.landmark
+            landmarks = results_pose.pose_landmarks.landmark
             # landmark format in landmarks
             # landmarks[index] (index represents a point)
             # landmarks[0].x (gets x coordinate of nose)
@@ -127,15 +140,74 @@ with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as
                     print("shoulders slouched! SLOUCHER! FOUND THE SLOUCHER!")
                     front_slouch_frames.append(frame)
 
+            # pose detection (Angela)
+            if results_face.pose_landmarks:
+                mp_drawing.draw_landmarks(
+                    image, results_face.pose_landmarks, mp_holistic.POSE_CONNECTIONS)
+
+            # face detection
+            if results_face.pose_landmarks and results_face.face_landmarks:
+                num_coords = len(results_face.pose_landmarks.landmark) + \
+                             len(results_face.face_landmarks.landmark)
+                landmarks = ['class']
+
+                for val in range(1, num_coords + 1):
+                    landmarks += ['x{}'.format(val), 'y{}'.format(val),
+                                  'z{}'.format(val), 'v{}'.format(val)]
+
+            # angela's pose stuff
+            pose_marks = results_face.pose_landmarks.landmark
+            pose_row = list(np.array(
+                [[landmark.x, landmark.y, landmark.z, landmark.visibility] for landmark in pose_marks]).flatten())
+
+            # Extract face landmarks
+            face = results_face.face_landmarks.landmark
+            face_row = list(np.array(
+                [[landmark.x, landmark.y, landmark.z, landmark.visibility] for landmark in face]).flatten())
+
+            # Concate rows
+            row = pose_row + face_row
+
+            # Make face detections
+            X = pd.DataFrame([row])
+            body_language_class = model.predict(X.values)[0]
+            body_language_prob = model.predict_proba(X.values)[0]
+            # print(body_language_class, body_language_prob)
+
+            # Grab ear coords
+            coords = tuple(
+                np.multiply(np.array((results_face.pose_landmarks.landmark[mp_holistic.PoseLandmark.LEFT_EAR].x,
+                                      results_face.pose_landmarks.landmark[mp_holistic.PoseLandmark.LEFT_EAR].y)),
+                            [640, 480]).astype(int))
+
+            cv2.rectangle(image, (0, 0), (250, 60), (245, 117, 16), -1)
+
+            # Display Class
+            cv2.putText(image, 'CLASS', (95, 12),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+            cv2.putText(image, body_language_class.split(' ')[0], (90, 40),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+            
+            # Display Probability
+            cv2.putText(image, 'PROB', (15, 12),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+            cv2.putText(image, str(round(body_language_prob[np.argmax(body_language_prob)], 2)), (10, 40),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+
         except:
             pass
 
-        # draw detections
-        mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
+        # draw face landmarks
+        # mp_drawing.draw_landmarks(image, results_face.face_landmarks, mp_holistic.FACEMESH_TESSELATION,
+        #                           mp_drawing.DrawingSpec(color=(
+        #                               80, 110, 0), thickness=1, circle_radius=1),
+        #                           mp_drawing.DrawingSpec(color=(100, 100, 10), thickness=1, circle_radius=1))
+
+        # draw pose landmarks
+        mp_drawing.draw_landmarks(image, results_pose.pose_landmarks, mp_pose.POSE_CONNECTIONS,
                                   # change colours of dots and lines (connections) in bgr format
                                   mp_drawing.DrawingSpec(color=(245, 117, 66), thickness=2, circle_radius=2),
-                                  mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2)
-                                  )
+                                  mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2))
 
         cv2.imshow('Mediapipe Feed', image)
 
