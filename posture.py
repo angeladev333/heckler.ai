@@ -29,17 +29,8 @@ def vector_change(frames):
         angle_changes.append(angle)
 
     threshold = 0.15
-    significant_changes = [i for i, angle in enumerate(angle_changes) if angle > threshold]
+    significant_changes = [i for i, angle in enumerate(angle_changes) if angle > threshold]  # gets index of frame for gesture
     return significant_changes
-
-def calculate_vector(point1, point2):
-    point1 = np.array(point1)
-    point2 = np.array(point2)
-
-    # Calculate the vector between two 3D points
-    vector = [round(point2[0] - point1[0], 2), round(point2[1] - point1[1], 2), round(point2[2] - point1[2], 2)]
-
-    return vector
 
     # live video
 cap = cv2.VideoCapture(0)  # default webcam
@@ -47,6 +38,7 @@ cap = cv2.VideoCapture(0)  # default webcam
 counter = 0
 frames = []
 left_wrist_frames = []
+right_wrist_frames = []
 start_time = 0
 
 # set up media pose instance
@@ -78,18 +70,19 @@ with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as
             # visibility: 0.9999997615814209 # % likely of it being visible (basically checking if mediapipe can but a dot on it)
             #print(landmarks)
 
-            elbow_left = [round(landmarks[13].x, 2), round(landmarks[13].y, 2), round(landmarks[13].z, 2)]
-
             wrist_left = [round(landmarks[15].x, 2), round(landmarks[15].y, 2), round(landmarks[15].z, 2)]
             left_wrist_frames.append(wrist_left)
+
+            wrist_right = [round(landmarks[16].x, 2), round(landmarks[16].y, 2), round(landmarks[16].z, 2)]
+            right_wrist_frames.append(wrist_right)
 
             cv2.putText(image, str(wrist_left),
                         tuple(np.multiply([wrist_left[0], wrist_left[1]], [640, 480]).astype(int)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 250), 2, cv2.LINE_AA
                         )
 
-            cv2.putText(image, str(elbow_left),
-                        tuple(np.multiply([elbow_left[0], elbow_left[1]], [640, 480]).astype(int)),
+            cv2.putText(image, str(wrist_right),
+                        tuple(np.multiply([wrist_right[0], wrist_right[1]], [640, 480]).astype(int)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 250), 2, cv2.LINE_AA
                         )
 
@@ -118,7 +111,9 @@ print(time_per_frame)
 cap.release()
 cv2.destroyAllWindows()
 
-gesture_index = vector_change(left_wrist_frames)
+gesture_index = vector_change(left_wrist_frames) + vector_change(right_wrist_frames)
+gesture_index = sorted(gesture_index)
+
 print(gesture_index)
 
 # list of a frame index where there are no gestures for a long period of time
@@ -131,13 +126,13 @@ for i in gesture_index:
     cv2.waitKey(0)
 
 # finding where are no gestures
-if len(gesture_index) == 1 and elapse_time > 15:
-    absent_gesture.append(int(gesture_index[0]/2))
+if len(gesture_index) == 1 and elapse_time > 13:
+    absent_gesture.append(int(gesture_index[0] / 2))  # code is a bit scuffed
 else:
     for i in range(1, len(gesture_index)):
-        delta_time = (gesture_index[i] - gesture_index[i-1])*time_per_frame
-        if delta_time > 10: # if there is more than 10 seconds in between each hand gesture, we append an image to the absent_gesture list
-            absent_gesture.append(int((gesture_index[i] + gesture_index[i-1])/2))
+        delta_time = (gesture_index[i] - gesture_index[i - 1]) * time_per_frame
+        if delta_time > 7: # if there is more than 7 seconds in between each hand gesture, we append an image to the absent_gesture list
+            absent_gesture.append(int((gesture_index[i] + gesture_index[i - 1]) / 2))
 
 for i in absent_gesture:
     cv2.imshow("no gesture", frames[i])
@@ -145,4 +140,3 @@ for i in absent_gesture:
 
 cv2.waitKey(0)
 cv2.destroyAllWindows()
-
