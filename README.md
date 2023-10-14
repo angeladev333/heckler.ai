@@ -21,7 +21,7 @@ python main.py
 # face.py
 
 ```
-pip install mediapipe opencv-python pandas scikit-learn
+pip install -r requirements.txt
 ```
 
 to run, run face.py
