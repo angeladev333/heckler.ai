@@ -1,4 +1,4 @@
-from taipy.gui import Gui, notify
+from taipy.gui import Gui, notify, navigate
 from webcam import Webcam
 import cv2
 
