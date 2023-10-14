@@ -4,12 +4,12 @@ import numpy as np
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
 
-def hand_gesture(a, b, c):
-    a = np.array(a)  # First
-    b = np.array(b)  # Mid
-    c = np.array(c)  # End
+def get_angle(first, mid, end):
+    first = np.array(first)  # First
+    mid = np.array(mid)  # Mid
+    end = np.array(end)  # End
 
-    radians = np.arctan2(c[1] - b[1], c[0] - b[0]) - np.arctan2(a[1] - b[1], a[0] - b[0])
+    radians = np.arctan2(end[1] - mid[1], end[0] - mid[0]) - np.arctan2(first[1] - mid[1], first[0] - mid[0])
     angle = np.abs(radians * 180.0 / np.pi)
 
     if angle > 180.0:
@@ -21,8 +21,10 @@ def hand_gesture(a, b, c):
     # live video
 cap = cv2.VideoCapture(0)  # default webcam
 
+counter = 0
+
 # set up media pose instance
-with mp_pose.Pose(min_detection_confidence=0.55, min_tracking_confidence=0.5) as pose:
+with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as pose:
     while cap.isOpened():
         ret, frame = cap.read()  # getting frames (img) from video feed
 
@@ -47,6 +49,29 @@ with mp_pose.Pose(min_detection_confidence=0.55, min_tracking_confidence=0.5) as
             # z: 0.129959
             # visibility: 0.9999997615814209 # % likely of it being visible (basically checking if mediapipe can but a dot on it)
             #print(landmarks)
+
+            # calculate bend of right elbow
+            shoulder_left = [landmarks[11].x, landmarks[11].y]
+            elbow_left = [landmarks[13].x, landmarks[13].y]
+            wrist_left = [landmarks[15].x, landmarks[15].y]
+
+            left_elbow_angle = get_angle(shoulder_left, elbow_left, wrist_left)
+
+            # display angle
+            # color in bgr
+            cv2.putText(image, str(left_elbow_angle),
+                        tuple(np.multiply(elbow_left, [640, 480]).astype(int)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 250), 2, cv2.LINE_AA
+                        )
+
+            # hand gesture logic
+            if left_elbow_angle > 150:
+                stage = "down"
+            if left_elbow_angle < 60 and stage == 'down':
+                stage = "up"
+                counter += 1
+                print(counter)
+
         except:
             pass
 
