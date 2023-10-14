@@ -23,3 +23,9 @@ python main.py
 ```
 pip install mediapipe opencv-python pandas scikit-learn
 ```
+
+- Crossed Arms
+- Disengaged
+- Smiling
+- Stern
+- Looking Down
