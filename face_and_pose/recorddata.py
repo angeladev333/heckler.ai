@@ -53,14 +53,14 @@ with mp_holistic.Holistic(min_detection_confidence=0.6, min_tracking_confidence=
                 landmarks += ['x{}'.format(val), 'y{}'.format(val),
                               'z{}'.format(val), 'v{}'.format(val)]
 
-        # # ----------------------------------------------------------------------------------
+        # ----------------------------------------------------------------------------------
         # with open('coords.csv', mode='w', newline='') as f:
         #     csv_writer = csv.writer(
         #         f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         #     csv_writer.writerow(landmarks)
-        # # ----------------------------------------------------------------------------------
+        # ----------------------------------------------------------------------------------
 
-        class_name = "Stoic"
+        class_name = "Smiling"
 
         # Export coordinates
         try:

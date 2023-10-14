@@ -16,7 +16,7 @@ X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.3, random_state=1234)
 
 pipelines = {
-    'lr': make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000)),
+    'lr': make_pipeline(StandardScaler(), LogisticRegression(max_iter=1500)),
     'rc': make_pipeline(StandardScaler(), RidgeClassifier(max_iter=1000)),
     'rf': make_pipeline(StandardScaler(), RandomForestClassifier()),
     'gb': make_pipeline(StandardScaler(), GradientBoostingClassifier()),

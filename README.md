@@ -24,8 +24,10 @@ python main.py
 pip install mediapipe opencv-python pandas scikit-learn
 ```
 
+to run, run face.py
+
+## Features included:
+
 - Crossed Arms
 - Disengaged
 - Smiling
-- Stern
-- Looking Down
