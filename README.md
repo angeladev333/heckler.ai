@@ -1,7 +1,9 @@
 # hackthevalley
 
 ## Setup
-with anaconda: 
+
+with anaconda:
+
 ```
 conda create -n ergonomy
 conda env list
@@ -10,12 +12,14 @@ pip install mediapipe opencv-python
 
 ```
 
-## Run 
+## Run
+
 ```
 python main.py
 ```
 
 # face.py
+
 ```
-pip install mediapipe opencv
+pip install mediapipe opencv-python pandas scikit-learn
 ```
