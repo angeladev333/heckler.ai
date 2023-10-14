@@ -8,6 +8,7 @@ import pandas as pd
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
 
+
 def vector_change(frames):
     angle_changes = []
 
@@ -19,8 +20,42 @@ def vector_change(frames):
         angle_changes.append(angle)
 
     threshold = 0.15
-    significant_changes = [i for i, angle in enumerate(angle_changes) if angle > threshold]  # gets index of frame for gesture
+    significant_changes = [i for i, angle in enumerate(angle_changes) if
+                           angle > threshold]  # gets index of frame for gesture
     return significant_changes
+
+
+def get_no_gesture_frames(time_per_frame, left_wrist_frames, right_wrist_frames):
+    gesture_index = vector_change(left_wrist_frames) + vector_change(right_wrist_frames)
+    gesture_index = sorted(gesture_index)
+
+    print(gesture_index)
+
+    # list of a frame index where there are no gestures for a long period of time
+    absent_gesture = []
+
+    # # i = index of gesture in frame array (aka frame number)
+    # for i in gesture_index:
+    #     cv2.imshow("asdf", frames[i])
+    #     cv2.waitKey(0)
+
+    # finding where are no gestures
+    if len(gesture_index) == 1 and elapse_time > 13:
+        absent_gesture.append(int(gesture_index[0] / 2))  # code is a bit scuffed
+    else:
+        for i in range(1, len(gesture_index)):
+            delta_time = (gesture_index[i] - gesture_index[i - 1]) * time_per_frame
+            if delta_time > 7:  # if there is more than 7 seconds in between each hand gesture, we append an image to the absent_gesture list
+                absent_gesture.append(int((gesture_index[i] + gesture_index[i - 1]) / 2))
+
+    # for i in absent_gesture:
+    #     cv2.imshow("no gesture", frames[i])
+    #     cv2.waitKey(0)
+    if not absent_gesture:
+        return None
+    else:
+        return frames[absent_gesture[0]]  # returns first instance of absent hand gesture
+
 
 def isFacingForward(a, b):
     if ((a < 0 and b > 0) or (a > 0 and b < 0)):
@@ -36,6 +71,22 @@ def isFacingForward(a, b):
 
     return True
 
+
+# get the frame that has the max slouch
+def get_slouching_frames(front_slouch_frames):
+    if not front_slouch_frames:
+        return None
+
+    factor_z = max(front_slouch_frames.keys())
+    print(factor_z)
+
+    return front_slouch_frames[factor_z]
+
+    # for f, factor_z in front_slouch_frames:
+    #     cv2.imshow("slouching", f)
+    #     cv2.waitKey(0)
+
+
 # getting ml face model
 with open('body_language.pkl', 'rb') as f:
     model = pickle.load(f)
@@ -49,17 +100,18 @@ cap = cv2.VideoCapture(0)  # default webcam
 frames = []
 left_wrist_frames = []
 right_wrist_frames = []
-front_slouch_frames = []
+front_slouch_frames = {}
 start_time = 0
 
 # set up media pose instance
-with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as pose, mp_holistic.Holistic(min_detection_confidence=0.6, min_tracking_confidence=0.6) as holistic:
+with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as pose, mp_holistic.Holistic(
+        min_detection_confidence=0.6, min_tracking_confidence=0.6) as holistic:
     start_time = time.time()
     while cap.isOpened():
         ret, frame = cap.read()  # getting frames (img) from video feed
-        frames.append(frame) # adding frame to list of frames
+        frames.append(frame)  # adding frame to list of frames
 
-        image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # reorder colour array to rgb for mediapipe
+        image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # reorder colour array to rgb for mediapipe
         image.flags.writeable = False  # save memory by setting to not writeable
 
         # Make detection
@@ -69,8 +121,6 @@ with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as
         # Recolor back to BGR
         image.flags.writeable = True
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)  # reorder to bgr to put it back into opencv
-
-
 
         # extract landmarks
         try:
@@ -82,7 +132,7 @@ with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as
             # y: 0.671197
             # z: 0.129959
             # visibility: 0.9999997615814209 # % likely of it being visible (basically checking if mediapipe can but a dot on it)
-            #print(landmarks)
+            # print(landmarks)
 
             # calculate bend of torso/waist
             # left_knee = [landmarks[25].x, landmarks[25].y]
@@ -136,9 +186,9 @@ with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as
                 knee = (landmarks[25].z + landmarks[26].z) / 2
                 print("knee =", knee)
 
-                if abs(shoulder) / abs(waist) > 750:
+                if abs(shoulder) / abs(waist) > 700:
                     print("shoulders slouched! SLOUCHER! FOUND THE SLOUCHER!")
-                    front_slouch_frames.append(frame)
+                    front_slouch_frames[abs(shoulder) / abs(waist)] = frame
 
             # pose detection (Angela)
             if results_face.pose_landmarks:
@@ -187,7 +237,7 @@ with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
             cv2.putText(image, body_language_class.split(' ')[0], (90, 40),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
-            
+
             # Display Probability
             cv2.putText(image, 'PROB', (15, 12),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
@@ -212,7 +262,7 @@ with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as
         cv2.imshow('Mediapipe Feed', image)
 
         if cv2.waitKey(10) & 0xFF == ord('q'):  # press q to quit
-            #print(landmarks[21].visibility)
+            # print(landmarks[21].visibility)
             break
 
 end_time = time.time()
@@ -221,38 +271,19 @@ time_per_frame = elapse_time / len(frames)
 
 print(elapse_time)
 print(time_per_frame)
+
 cap.release()
 cv2.destroyAllWindows()
 
-gesture_index = vector_change(left_wrist_frames) + vector_change(right_wrist_frames)
-gesture_index = sorted(gesture_index)
+gesture_img_feedback = get_no_gesture_frames(time_per_frame, left_wrist_frames, right_wrist_frames)
+slouch_img_feedback = get_slouching_frames(front_slouch_frames)
 
-print(gesture_index)
-
-# list of a frame index where there are no gestures for a long period of time
-absent_gesture = []
-
-# # i = index of gesture in frame array (aka frame number)
-# for i in gesture_index:
-#     cv2.imshow("asdf", frames[i])
-#     cv2.waitKey(0)
-
-# finding where are no gestures
-if len(gesture_index) == 1 and elapse_time > 13:
-    absent_gesture.append(int(gesture_index[0] / 2))  # code is a bit scuffed
-else:
-    for i in range(1, len(gesture_index)):
-        delta_time = (gesture_index[i] - gesture_index[i - 1]) * time_per_frame
-        if delta_time > 7: # if there is more than 7 seconds in between each hand gesture, we append an image to the absent_gesture list
-            absent_gesture.append(int((gesture_index[i] + gesture_index[i - 1]) / 2))
-
-for i in absent_gesture:
-    cv2.imshow("no gesture", frames[i])
+if gesture_img_feedback is not None:
+    cv2.imshow("no gesture feedback", gesture_img_feedback)
     cv2.waitKey(0)
 
-for f in front_slouch_frames:
-    cv2.imshow("shouching", f)
+if slouch_img_feedback is not None:
+    cv2.imshow("slouch feedback", slouch_img_feedback)
     cv2.waitKey(0)
 
-cv2.waitKey(0)
 cv2.destroyAllWindows()
