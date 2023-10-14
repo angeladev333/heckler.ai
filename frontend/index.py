@@ -71,7 +71,7 @@ We evaluate your presentation skills based on the following
 
 pages = {
     "/": "<|toggle|theme|>\n<center>\n<|navbar|>\n</center>",
-    "app": page1_md,
+    "app": page,
     "rules": page2_md,
 }
 
@@ -87,13 +87,13 @@ pages = {
 #         return
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
     # # Create dir where the pictures will be stored
     # if not training_data_folder.exists():
     #     training_data_folder.mkdir()
 
     # train_face_recognizer(training_data_folder)
 
-    gui = Gui(pages=pages)
-    gui.add_library(Webcam())
-    gui.run()
+gui = Gui(pages=pages)
+gui.add_library(Webcam())
+gui.run()
