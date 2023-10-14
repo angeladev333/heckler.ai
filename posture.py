@@ -5,19 +5,6 @@ import time
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
 
-def get_angle(first, mid, end):
-    first = np.array(first)  # First
-    mid = np.array(mid)  # Mid
-    end = np.array(end)  # End
-
-    radians = np.arctan2(end[1] - mid[1], end[0] - mid[0]) - np.arctan2(first[1] - mid[1], first[0] - mid[0])
-    angle = np.abs(radians * 180.0 / np.pi)
-
-    if angle > 180.0:
-        angle = 360 - angle
-
-    return angle
-
 def vector_change(frames):
     angle_changes = []
 
@@ -35,7 +22,6 @@ def vector_change(frames):
     # live video
 cap = cv2.VideoCapture(0)  # default webcam
 
-counter = 0
 frames = []
 left_wrist_frames = []
 right_wrist_frames = []
@@ -46,7 +32,7 @@ with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as
     start_time = time.time()
     while cap.isOpened():
         ret, frame = cap.read()  # getting frames (img) from video feed
-        frames.append(frame)
+        frames.append(frame) # adding frame to list of frames
 
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # reorder colour array to rgb for mediapipe
         image.flags.writeable = False  # save memory by setting to not writeable
@@ -121,7 +107,6 @@ absent_gesture = []
 
 # i = index of gesture in frame array (aka frame number)
 for i in gesture_index:
-
     cv2.imshow("asdf", frames[i])
     cv2.waitKey(0)
 
