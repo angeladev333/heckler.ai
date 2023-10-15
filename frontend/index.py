@@ -12,7 +12,7 @@ from demo.faces import detect_faces, recognize_face, train_face_recognizer
 
 logging.basicConfig(level=logging.DEBUG)
 
-training_data_folder = Path("images")
+# training_data_folder = Path("images")
 
 show_capture_dialog = False
 capture_image = False
@@ -23,18 +23,54 @@ labeled_faces = []  # Contains rect with label (for UI component)
 captured_image = None
 captured_label = ""
 
+darkmode = False
+lightmode = True
 
 # Definition of the page
 page = """
 <|toggle|theme|>
 
-# **PresentAR**{: .color-primary} - the modernized presentation assistant
+<container|container|part|
+
+<|layout|columns=1 3|
+<|part|render={darkmode}|
+<|heckler.jpg|image|classname=logo|label=heckler ai logo|>
+|>
+<|part|render={lightmode}|
+<|hecklerwhite.jpg.png|image|label=heckler ai logo|>
+|>
+<|
+# **heckler.ai**{: .color-primary} 
+ **the modernized presentation assistant**
+|>
+
+|>
 
 Welcome to PresentAR! We use [Taipy](https://taipy.io/) with a [custom GUI component](https://docs.taipy.io/en/latest/manuals/gui/extension/) to capture video from your webcam and do realtime presentation feedback 
 
+<br/>
+
+<|card|card p-half|part|
+## **Start**{: .color-primary} presenting!
+
+<|text-center|part|
+<|webcam.Webcam|classname=face_detector|id=my_face_detector|sampling_rate=100|>
+
+|card>
+|container>
+|>
+
+"""
+
+
+
+page2_md = """
+
 <|layout|columns=1 1|
 <|
-Are you ready to improve your presentation skills?
+### Are you ready to improve your presentation skills?
+
+<|heckler2.png|image|label=example|>
 |>
 
 <|
@@ -46,18 +82,6 @@ Are you ready to improve your presentation skills?
 |>
 |>
 
-<|card|part|
-## **Webcam**{: .color-primary} component
-
-<|text-center|part|
-<|webcam.Webcam|id=my_webcam|sampling_rate=100|>
->
-|card>
-|container>
-"""
-
-
-page2_md = """
 ## Rules and Evaluations
 
 We evaluate your presentation skills based on the following
@@ -76,9 +100,12 @@ pages = {
 }
 
 
-# def on_button_action(state):
-#     notify(state, 'info', f'The text is: {state.text}')
-#     state.text = "Button Pressed"
+# def on_theme_action(state):
+#     global darkmode, lightmode
+#     notify(state, 'info', f'The theme is: {state}')
+#     darkmode = not darkmode
+#     lightmode = not lightmode
+#     return
 
 
 # def on_change(state, var_name, var_value):
@@ -86,14 +113,16 @@ pages = {
 #         state.text = ""
 #         return
 
+gui = Gui(pages=pages)
+gui.add_library(Webcam())
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
     # # Create dir where the pictures will be stored
     # if not training_data_folder.exists():
     #     training_data_folder.mkdir()
 
     # train_face_recognizer(training_data_folder)
 
-gui = Gui(pages=pages)
-gui.add_library(Webcam())
-gui.run()
+    gui.run(port=8000, title="Heckler AI")
+else:
+    app = gui.run(title="Heckler AI", run_server=False)
