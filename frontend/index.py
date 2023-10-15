@@ -41,7 +41,7 @@ page = """
 |>
 <|
 # **heckler.ai**{: .color-primary} 
- the modernized presentation assistant
+ **the modernized presentation assistant**
 |>
 
 |>
@@ -50,22 +50,8 @@ Welcome to PresentAR! We use [Taipy](https://taipy.io/) with a [custom GUI compo
 
 <br/>
 
-<|layout|columns=1 1|
-<|
-### Are you ready to improve your presentation skills?
-|>
-
-<|
-## Features included:
-
-- Crossed Arms
-- Disengaged
-- Smiling
-|>
-|>
-
 <|card|card p-half|part|
-## **Webcam**{: .color-primary} component
+## **Start**{: .color-primary} presenting!
 
 <|text-center|part|
 <|webcam.Webcam|classname=face_detector|id=my_face_detector|sampling_rate=100|>
@@ -79,6 +65,23 @@ Welcome to PresentAR! We use [Taipy](https://taipy.io/) with a [custom GUI compo
 
 
 page2_md = """
+
+<|layout|columns=1 1|
+<|
+### Are you ready to improve your presentation skills?
+
+<|heckler2.png|image|label=example|>
+|>
+
+<|
+## Features included:
+
+- Crossed Arms
+- Disengaged
+- Smiling
+|>
+|>
+
 ## Rules and Evaluations
 
 We evaluate your presentation skills based on the following
