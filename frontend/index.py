@@ -1,5 +1,7 @@
 from taipy.gui import Gui, notify, navigate
+import taipy as tp
 from webcam import Webcam
+import os
 import cv2
 
 import PIL.Image
@@ -113,6 +115,7 @@ pages = {
 #         state.text = ""
 #         return
 
+rest = tp.Rest()
 gui = Gui(pages=pages)
 gui.add_library(Webcam())
 
@@ -124,5 +127,5 @@ if __name__ == "__main__":
     # train_face_recognizer(training_data_folder)
 
     gui.run(port=8000, title="Heckler AI")
-else:
-    app = gui.run(title="Heckler AI", run_server=False)
+# else:
+#     tp.run(title="Heckler AI", host='0.0.0.0', post=os.environ.get('PORT', '5000'),)
