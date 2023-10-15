@@ -28,13 +28,17 @@ captured_label = ""
 page = """
 <|toggle|theme|>
 
+<container|container|part|
+
 # **PresentAR**{: .color-primary} - the modernized presentation assistant
 
 Welcome to PresentAR! We use [Taipy](https://taipy.io/) with a [custom GUI component](https://docs.taipy.io/en/latest/manuals/gui/extension/) to capture video from your webcam and do realtime presentation feedback 
 
+<br/>
+
 <|layout|columns=1 1|
 <|
-Are you ready to improve your presentation skills?
+### Are you ready to improve your presentation skills?
 |>
 
 <|
@@ -46,15 +50,18 @@ Are you ready to improve your presentation skills?
 |>
 |>
 
-<|card|part|
+<|card|card p-half|part|
 ## **Webcam**{: .color-primary} component
 
 <|text-center|part|
-<|webcam.Webcam|id=my_webcam|sampling_rate=100|>
->
+<|webcam.Webcam|classname=face_detector|id=my_face_detector|sampling_rate=100|>
+
 |card>
 |container>
+|>
+
 """
+
 
 
 page2_md = """
@@ -87,13 +94,13 @@ pages = {
 #         return
 
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
     # # Create dir where the pictures will be stored
     # if not training_data_folder.exists():
     #     training_data_folder.mkdir()
 
     # train_face_recognizer(training_data_folder)
 
-gui = Gui(pages=pages)
-gui.add_library(Webcam())
-gui.run()
+    gui = Gui(pages=pages)
+    gui.add_library(Webcam())
+    gui.run()

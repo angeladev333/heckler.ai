@@ -7,3 +7,4 @@ opencv-python
 pandas
 scikit-learn
 python-magic
+python-magic-bin
