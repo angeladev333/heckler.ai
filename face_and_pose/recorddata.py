@@ -6,8 +6,8 @@ import pickle
 import pandas as pd
 
 
-with open('body_language.pkl', 'rb') as f:
-    model = pickle.load(f)
+# with open('body_language.pkl', 'rb') as f:
+#     model = pickle.load(f)
 
 mp_drawing = mp.solutions.drawing_utils
 mp_holistic = mp.solutions.holistic
@@ -39,19 +39,28 @@ with mp_holistic.Holistic(min_detection_confidence=0.6, min_tracking_confidence=
             80, 110, 0), thickness=1, circle_radius=1), mp_drawing.DrawingSpec(color=(100, 100, 10), thickness=1, circle_radius=1))
 
         # Pose detection
-        if results.pose_landmarks:
-            mp_drawing.draw_landmarks(
-                image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS)
+        # if results.pose_landmarks:
+        #     mp_drawing.draw_landmarks(
+        #         image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS)
 
         # get landmark coordinates
-        if results.pose_landmarks and results.face_landmarks:
-            num_coords = len(results.pose_landmarks.landmark) + \
-                len(results.face_landmarks.landmark)
+        # if results.pose_landmarks and results.face_landmarks:
+        #     num_coords = len(results.pose_landmarks.landmark) + \
+        #         len(results.face_landmarks.landmark)
+        #     landmarks = ['class']
+        #
+        #     for val in range(1, num_coords + 1):
+        #         landmarks += ['x{}'.format(val), 'y{}'.format(val),
+        #                       'z{}'.format(val), 'v{}'.format(val)]
+
+        if results.face_landmarks:
+            num_coords = len(results.face_landmarks.landmark)
             landmarks = ['class']
 
             for val in range(1, num_coords + 1):
                 landmarks += ['x{}'.format(val), 'y{}'.format(val),
                               'z{}'.format(val), 'v{}'.format(val)]
+
 
         # ----------------------------------------------------------------------------------
         # with open('coords.csv', mode='w', newline='') as f:
@@ -60,14 +69,14 @@ with mp_holistic.Holistic(min_detection_confidence=0.6, min_tracking_confidence=
         #     csv_writer.writerow(landmarks)
         # ----------------------------------------------------------------------------------
 
-        class_name = "Smiling"
+        class_name = "Disengaged"
 
         # Export coordinates
         try:
             # Extract pose landmarks
-            pose = results.pose_landmarks.landmark
-            pose_row = list(np.array(
-                [[landmark.x, landmark.y, landmark.z, landmark.visibility] for landmark in pose]).flatten())
+            # pose = results.pose_landmarks.landmark
+            # pose_row = list(np.array(
+            #     [[landmark.x, landmark.y, landmark.z, landmark.visibility] for landmark in pose]).flatten())
 
             # Extract face landmarks
             face = results.face_landmarks.landmark
@@ -75,7 +84,8 @@ with mp_holistic.Holistic(min_detection_confidence=0.6, min_tracking_confidence=
                 [[landmark.x, landmark.y, landmark.z, landmark.visibility] for landmark in face]).flatten())
 
             # Concate rows
-            row = pose_row + face_row
+            # row = pose_row + face_row
+            row = face_row
 
             # ----------------------------------------------------------------------------------
             # Append class name

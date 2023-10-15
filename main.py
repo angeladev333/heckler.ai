@@ -54,7 +54,7 @@ def isFacingForward(a, b):
 
 
 # getting ml face model
-with open('body_language.pkl', 'rb') as f:
+with open(r'C:\Users\miran\.vscode\hackthevalley\body_language.pkl', 'rb') as f:
     model = pickle.load(f)
 
 mp_drawing = mp.solutions.drawing_utils
@@ -116,32 +116,37 @@ with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as
                     frames_since_gesture += 1
 
             if frames_since_gesture > 45:
+                cv2.putText(image, "MOVE YOUR HANDS",
+                            tuple(np.multiply([wrist_left[0], wrist_left[1]], [640, 480]).astype(int)),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 250), 2, cv2.LINE_AA
+                            )
                 print("Where are your hand gestures!!!!!!")
 
-            # display text on image
-            cv2.putText(image, str(wrist_left),
-                        tuple(np.multiply([wrist_left[0], wrist_left[1]], [640, 480]).astype(int)),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 250), 2, cv2.LINE_AA
-                        )
 
-            cv2.putText(image, str(wrist_right),
-                        tuple(np.multiply([wrist_right[0], wrist_right[1]], [640, 480]).astype(int)),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 250), 2, cv2.LINE_AA
-                        )
+            # display text on image
+            # cv2.putText(image, str(wrist_left),
+            #             tuple(np.multiply([wrist_left[0], wrist_left[1]], [640, 480]).astype(int)),
+            #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 250), 2, cv2.LINE_AA
+            #             )
+
+            # cv2.putText(image, str(wrist_right),
+            #             tuple(np.multiply([wrist_right[0], wrist_right[1]], [640, 480]).astype(int)),
+            #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 250), 2, cv2.LINE_AA
+            #             )
 
             shoulder = (landmarks[11].z + landmarks[12].z) / 2  # getting average shoulder z value
 
             waist = (landmarks[23].z + landmarks[24].z) / 2  # getting average waist z value
 
-            cv2.putText(image, str(shoulder),
-                        tuple(np.multiply([shoulder_left[0], shoulder_left[1]], [640, 480]).astype(int)),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 250), 2, cv2.LINE_AA
-                        )
-
-            cv2.putText(image, str(waist),
-                        tuple(np.multiply([left_waist[0], left_waist[1]], [640, 480]).astype(int)),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 250), 2, cv2.LINE_AA
-                        )
+            # cv2.putText(image, str(shoulder),
+            #             tuple(np.multiply([shoulder_left[0], shoulder_left[1]], [640, 480]).astype(int)),
+            #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 250), 2, cv2.LINE_AA
+            #             )
+            #
+            # cv2.putText(image, str(waist),
+            #             tuple(np.multiply([left_waist[0], left_waist[1]], [640, 480]).astype(int)),
+            #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 250), 2, cv2.LINE_AA
+            #             )
 
             if isFacingForward(landmarks[12].z, landmarks[11].z):
                 shoulder = (landmarks[11].z + landmarks[12].z) / 2
@@ -153,9 +158,12 @@ with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as
                 knee = (landmarks[25].z + landmarks[26].z) / 2
                 # print("knee =", knee)
 
-                if abs(shoulder) / abs(waist) > 700:
+                if abs(shoulder) / abs(waist) > 300:
                     print("shoulders slouched! SLOUCHER! FOUND THE SLOUCHER!")
-                    #front_slouch_frames[abs(shoulder) / abs(waist)] = frame
+                    cv2.putText(image, "STAND UP STRAIGHT!",
+                                tuple(np.multiply([shoulder_left[0], shoulder_left[1]], [640, 480]).astype(int)),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 250), 2, cv2.LINE_AA
+                                )
 
             # pose detection (Angela)
             if results_face.pose_landmarks:
@@ -172,7 +180,7 @@ with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as
                     landmarks += ['x{}'.format(val), 'y{}'.format(val),
                                   'z{}'.format(val), 'v{}'.format(val)]
 
-            # angela's pose stuff
+            #angela's pose stuff
             pose_marks = results_face.pose_landmarks.landmark
             pose_row = list(np.array(
                 [[landmark.x, landmark.y, landmark.z, landmark.visibility] for landmark in pose_marks]).flatten())
@@ -184,12 +192,12 @@ with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as
 
             # Concate rows
             row = pose_row + face_row
+            # row = face_row
 
             # Make face detections
             X = pd.DataFrame([row])
             body_language_class = model.predict(X.values)[0]
             body_language_prob = model.predict_proba(X.values)[0]
-            # print(body_language_class, body_language_prob)
 
             # Grab ear coords
             coords = tuple(
@@ -200,16 +208,17 @@ with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as
             cv2.rectangle(image, (0, 0), (250, 60), (245, 117, 16), -1)
 
             # Display Class
-            cv2.putText(image, 'CLASS', (95, 12),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
-            cv2.putText(image, body_language_class.split(' ')[0], (90, 40),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+            if body_language_prob[np.argmax(body_language_prob)] > 0.5:
+                cv2.putText(image, 'CLASS', (95, 12),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+                cv2.putText(image, body_language_class.split(' ')[0], (90, 40),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
-            # Display Probability
-            cv2.putText(image, 'PROB', (15, 12),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
-            cv2.putText(image, str(round(body_language_prob[np.argmax(body_language_prob)], 2)), (10, 40),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+                # Display Probability
+                cv2.putText(image, 'PROB', (15, 12),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+                cv2.putText(image, str(round(body_language_prob[np.argmax(body_language_prob)], 2)), (10, 40),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
         except:
             pass
