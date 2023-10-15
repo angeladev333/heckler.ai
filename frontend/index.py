@@ -30,7 +30,8 @@ page = """
 
 <container|container|part|
 
-# **PresentAR**{: .color-primary} - the modernized presentation assistant
+# **heckler.ai**{: .color-primary} 
+ - the modernized presentation assistant
 
 Welcome to PresentAR! We use [Taipy](https://taipy.io/) with a [custom GUI component](https://docs.taipy.io/en/latest/manuals/gui/extension/) to capture video from your webcam and do realtime presentation feedback 
 
@@ -103,4 +104,4 @@ if __name__ == "__main__":
 
     gui = Gui(pages=pages)
     gui.add_library(Webcam())
-    gui.run()
+    gui.run(port=8000)
