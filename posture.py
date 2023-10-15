@@ -110,6 +110,7 @@ with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as
     while cap.isOpened():
         ret, frame = cap.read()  # getting frames (img) from video feed
         frames.append(frame)  # adding frame to list of frames
+        frames_since_gesture = 0
 
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # reorder colour array to rgb for mediapipe
         image.flags.writeable = False  # save memory by setting to not writeable
