@@ -10,7 +10,6 @@ import io
 import logging
 import uuid
 from pathlib import Path
-from demo.faces import detect_faces, recognize_face, train_face_recognizer
 
 logging.basicConfig(level=logging.DEBUG)
 
