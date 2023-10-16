@@ -9,7 +9,7 @@ export function useMediaStream(requestedMedia) {
                 const stream = await navigator.mediaDevices.getUserMedia(requestedMedia);
                 setMediaStream(stream);
             } catch (err) {
-                console.log("Something bad happened: " + err);
+                console.log("Something bad happend: " + err);
             }
         }
 

@@ -1,116 +1,239 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 import cv2
 import mediapipe as mp
 import numpy as np
-import matplotlib.pyplot as plt
+import time
+import pickle
+import pandas as pd
 
 mp_drawing = mp.solutions.drawing_utils
-mp_drawing_styles = mp.solutions.drawing_styles
 mp_pose = mp.solutions.pose
 
 
-class Ergonomy:
-    def __init__(self):
-        self.trunk_angle = 0
+def vector_change(frames):
+    angle_changes = []
 
-    def update_joints(self, landmarks_3d):
-        """update all needed joints based on landmarks_3d.landmark from mp"""
+    for i in range(1, len(frames)):
+        v1 = frames[i - 1]
+        v2 = frames[i]
+        cos_theta = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+        angle = np.arccos(np.clip(cos_theta, -1.0, 1.0))
+        angle_changes.append(angle)
+
+    threshold = 0.15
+    significant_changes = [i for i, angle in enumerate(angle_changes) if
+                           angle > threshold]  # gets index of frame for gesture
+    return significant_changes
+
+def is_gesture(frames):
+    length = len(frames)
+
+    v1 = frames[length - 2]
+    v2 = frames[length - 1]
+    cos_theta = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+    angle = np.arccos(np.clip(cos_theta, -1.0, 1.0))
+
+    threshold = 0.15
+    if angle > threshold:
+        return True
+    else:
+        return False
+
+def isFacingForward(a, b):
+    if ((a < 0 and b > 0) or (a > 0 and b < 0)):
+        # print("FACING DIAGONAL!")
+        return False
+    elif (a > 0 and b > 0) or (a < 0 and b < 0):
+        if abs(a - b) > 0.37:
+            # print("FACING DIAGONAL!")
+            return False
+        else:
+            # print("FACING FORWARD")
+            return True
+
+    return True
+
+
+# getting ml face model
+with open(r'C:\Users\miran\.vscode\hackthevalley\body_language.pkl', 'rb') as f:
+    model = pickle.load(f)
+
+mp_drawing = mp.solutions.drawing_utils
+mp_holistic = mp.solutions.holistic
+
+# live video
+cap = cv2.VideoCapture(0)  # default webcam
+
+frames = []
+left_wrist_frames = []
+right_wrist_frames = []
+front_slouch_frames = {}
+start_time = 0
+
+# set up media pose instance
+with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as pose, mp_holistic.Holistic(
+        min_detection_confidence=0.6, min_tracking_confidence=0.6) as holistic:
+
+    frames_since_gesture = 0
+    while cap.isOpened():
+        ret, frame = cap.read()  # getting frames (img) from video feed
+        frames.append(frame)  # adding frame to list of frames
+
+        image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # reorder colour array to rgb for mediapipe
+        image.flags.writeable = False  # save memory by setting to not writeable
+
+        # Make detection
+        results_pose = pose.process(image)
+        results_face = holistic.process(image)
+
+        # Recolor back to BGR
+        image.flags.writeable = True
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)  # reorder to bgr to put it back into opencv
+
+        # extract landmarks
         try:
-            # media pipe joints (BlazePose GHUM 3D)
-            left_shoulder = np.array(
-                [landmarks_3d.landmark[11].x, landmarks_3d.landmark[11].y, landmarks_3d.landmark[11].z])
-            right_shoulder = np.array(
-                [landmarks_3d.landmark[12].x, landmarks_3d.landmark[12].y, landmarks_3d.landmark[12].z])
-            left_hip = np.array([landmarks_3d.landmark[23].x, landmarks_3d.landmark[23].y, landmarks_3d.landmark[23].z])
-            right_hip = np.array(
-                [landmarks_3d.landmark[24].x, landmarks_3d.landmark[24].y, landmarks_3d.landmark[24].z])
-            left_knee = np.array(
-                [landmarks_3d.landmark[25].x, landmarks_3d.landmark[25].y, landmarks_3d.landmark[25].z])
-            right_knee = np.array(
-                [landmarks_3d.landmark[26].x, landmarks_3d.landmark[26].y, landmarks_3d.landmark[26].z])
+            landmarks = results_pose.pose_landmarks.landmark
 
-            # helper joints
-            mid_shoulder = (left_shoulder + right_shoulder) / 2
-            mid_hip = (left_hip + right_hip) / 2
-            mid_knee = (left_knee + right_knee) / 2
+            # calculate bend of torso/waist
+            left_waist = [landmarks[23].x, landmarks[23].y]
+            shoulder_left = [landmarks[11].x, landmarks[11].y]
 
-            # angles
-            self.trunk_angle = self.get_angle(mid_knee, mid_hip, mid_shoulder, mid_hip, adjust=True)
+            right_shoulder = [landmarks[12].x, landmarks[12].y]
+            right_waist = [landmarks[24].x, landmarks[24].y]
+
+            wrist_left = [round(landmarks[15].x, 2), round(landmarks[15].y, 2), round(landmarks[15].z, 2)]
+            left_wrist_frames.append(wrist_left)
+
+            wrist_right = [round(landmarks[16].x, 2), round(landmarks[16].y, 2), round(landmarks[16].z, 2)]
+            right_wrist_frames.append(wrist_right)
+
+            if len(right_wrist_frames) and len(left_wrist_frames) > 2:
+                if is_gesture(right_wrist_frames) or is_gesture(left_wrist_frames):
+                    # clear wrist frames
+                    left_wrist_frames = []
+                    right_wrist_frames = []
+                    frames_since_gesture = 0
+                else:
+                    frames_since_gesture += 1
+
+            if frames_since_gesture > 45:
+                cv2.putText(image, "MOVE YOUR HANDS",
+                            tuple(np.multiply([wrist_left[0], wrist_left[1]], [640, 480]).astype(int)),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 250), 2, cv2.LINE_AA
+                            )
+                print("Where are your hand gestures!!!!!!")
+
+
+            # display text on image
+            # cv2.putText(image, str(wrist_left),
+            #             tuple(np.multiply([wrist_left[0], wrist_left[1]], [640, 480]).astype(int)),
+            #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 250), 2, cv2.LINE_AA
+            #             )
+
+            # cv2.putText(image, str(wrist_right),
+            #             tuple(np.multiply([wrist_right[0], wrist_right[1]], [640, 480]).astype(int)),
+            #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 250), 2, cv2.LINE_AA
+            #             )
+
+            shoulder = (landmarks[11].z + landmarks[12].z) / 2  # getting average shoulder z value
+
+            waist = (landmarks[23].z + landmarks[24].z) / 2  # getting average waist z value
+
+            # cv2.putText(image, str(shoulder),
+            #             tuple(np.multiply([shoulder_left[0], shoulder_left[1]], [640, 480]).astype(int)),
+            #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 250), 2, cv2.LINE_AA
+            #             )
+            #
+            # cv2.putText(image, str(waist),
+            #             tuple(np.multiply([left_waist[0], left_waist[1]], [640, 480]).astype(int)),
+            #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 250), 2, cv2.LINE_AA
+            #             )
+
+            if isFacingForward(landmarks[12].z, landmarks[11].z):
+                shoulder = (landmarks[11].z + landmarks[12].z) / 2
+                # print("shoulder =", shoulder)
+
+                waist = (landmarks[23].z + landmarks[24].z) / 2
+                # print("waist =", waist)
+
+                knee = (landmarks[25].z + landmarks[26].z) / 2
+                # print("knee =", knee)
+
+                if abs(shoulder) / abs(waist) > 300:
+                    print("shoulders slouched! SLOUCHER! FOUND THE SLOUCHER!")
+                    cv2.putText(image, "STAND UP STRAIGHT!",
+                                tuple(np.multiply([shoulder_left[0], shoulder_left[1]], [640, 480]).astype(int)),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 250), 2, cv2.LINE_AA
+                                )
+
+            # pose detection (Angela)
+            if results_face.pose_landmarks:
+                mp_drawing.draw_landmarks(
+                    image, results_face.pose_landmarks, mp_holistic.POSE_CONNECTIONS)
+
+            # face detection
+            if results_face.pose_landmarks and results_face.face_landmarks:
+                num_coords = len(results_face.pose_landmarks.landmark) + \
+                             len(results_face.face_landmarks.landmark)
+                landmarks = ['class']
+
+                for val in range(1, num_coords + 1):
+                    landmarks += ['x{}'.format(val), 'y{}'.format(val),
+                                  'z{}'.format(val), 'v{}'.format(val)]
+
+            #angela's pose stuff
+            pose_marks = results_face.pose_landmarks.landmark
+            pose_row = list(np.array(
+                [[landmark.x, landmark.y, landmark.z, landmark.visibility] for landmark in pose_marks]).flatten())
+
+            # Extract face landmarks
+            face = results_face.face_landmarks.landmark
+            face_row = list(np.array(
+                [[landmark.x, landmark.y, landmark.z, landmark.visibility] for landmark in face]).flatten())
+
+            # Concate rows
+            row = pose_row + face_row
+            # row = face_row
+
+            # Make face detections
+            X = pd.DataFrame([row])
+            body_language_class = model.predict(X.values)[0]
+            body_language_prob = model.predict_proba(X.values)[0]
+
+            # Grab ear coords
+            coords = tuple(
+                np.multiply(np.array((results_face.pose_landmarks.landmark[mp_holistic.PoseLandmark.LEFT_EAR].x,
+                                      results_face.pose_landmarks.landmark[mp_holistic.PoseLandmark.LEFT_EAR].y)),
+                            [640, 480]).astype(int))
+
+            cv2.rectangle(image, (0, 0), (250, 60), (245, 117, 16), -1)
+
+            # Display Class
+            if body_language_prob[np.argmax(body_language_prob)] > 0.5:
+                cv2.putText(image, 'CLASS', (95, 12),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+                cv2.putText(image, body_language_class.split(' ')[0], (90, 40),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+
+                # Display Probability
+                cv2.putText(image, 'PROB', (15, 12),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+                cv2.putText(image, str(round(body_language_prob[np.argmax(body_language_prob)], 2)), (10, 40),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
         except:
-            # could not retrieve all needed joints
             pass
 
-    def get_angle(self, a, b, c, d, adjust):
-        """return the angle between two vectors"""
-        vec1 = a - b
-        vec2 = c - d
+        # draw pose landmarks
+        mp_drawing.draw_landmarks(image, results_pose.pose_landmarks, mp_pose.POSE_CONNECTIONS,
+                                  # change colours of dots and lines (connections) in bgr format
+                                  mp_drawing.DrawingSpec(color=(245, 117, 66), thickness=2, circle_radius=2),
+                                  mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2))
 
-        cosine_angle = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
-        angle = np.arccos(cosine_angle)
+        cv2.imshow('Mediapipe Feed', image)
 
-        # adjust by substracting 180 deg if needed
-        # this lets the angle start at 0 instead of 180
-        if (adjust):
-            angle_adjusted = abs(np.degrees(angle) - 180)
-            return int(angle_adjusted)
-        else:
-            return int(abs(np.degrees(angle)))
+        if cv2.waitKey(10) & 0xFF == ord('q'):  # press q to quit
+            # print(landmarks[21].visibility)
+            break
 
-    def get_trunk_color(self):
-        """returns (B,G,R) colors for visualization"""
-        if self.trunk_angle < 20:
-            return (0, 255, 0)
-        elif self.trunk_angle <= 60:
-            return (0, 255, 255)
-        else:
-            return (0, 0, 255)
-
-
-if __name__ == '__main__':
-    MyErgonomy = Ergonomy()
-    cap = cv2.VideoCapture(0)  # webcam input
-    with mp_pose.Pose(
-            model_complexity=1,
-            smooth_landmarks=True,
-            min_detection_confidence=0.3,
-            min_tracking_confidence=0.3) as pose:
-        while cap.isOpened():
-            success, image = cap.read()
-            if not success:
-                print("Ignoring empty camera frame.")
-                # If loading a video, use 'break' instead of 'continue'.
-                continue
-
-            # To improve performance, optionally mark the image as not writeable to
-            # pass by reference.
-            image.flags.writeable = False
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            results = pose.process(image)
-            landmarks_3d = results.pose_world_landmarks
-
-            # Draw the pose annotation on the image.
-            image.flags.writeable = True
-            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-            mp_drawing.draw_landmarks(
-                image,
-                results.pose_landmarks,
-                mp_pose.POSE_CONNECTIONS,
-                landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style())
-
-            MyErgonomy.update_joints(landmarks_3d)
-
-            # visualization: text + HP bar
-            image = cv2.putText(image, text="trunk angle: " + str(MyErgonomy.trunk_angle),
-                                org=(5, 60), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1,
-                                color=MyErgonomy.get_trunk_color(), thickness=3)
-            image = cv2.rectangle(image, (5, 5), (145 * 2, 30), color=(255, 255, 255), thickness=-1)
-            image = cv2.rectangle(image, (5, 5), (145 * 2 - (MyErgonomy.trunk_angle * 2), 30),
-                                  color=MyErgonomy.get_trunk_color(), thickness=-1)
-
-            cv2.imshow('MediaPipe Pose Demo', image)
-
-            if cv2.waitKey(5) & 0xFF == 27:
-                break
-    cap.release()
+cap.release()
+cv2.destroyAllWindows()
