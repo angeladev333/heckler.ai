@@ -16,7 +16,7 @@ Implementing webcam into taipy was difficult since there was no pre-built librar
 Furthermore, we had difficulties deploying Taipy to our custom domain name, "hecklerai.tech". Since Taipy is built of Flask, we tried different methods, such as deploying on Vercel, using Heroku, and Gunicorn, but our attempts were in vain. A potential solution would be deploying on a virtual machine through cloud hosting platforms like AWS, which could be implemented in the future.
 
 ## ✨ Accomplishments that we're proud of
-We are proud of ourselves for making so much progress in such little time with regards to a project that we thought was too ambitious. We were able to clear most of the key milestones of the project.
+We are proud of ourselves for making so much progress in such little time with regards to a project that we thought was too ambitious. We were able to clear most of the key milestones of this project.
 
 ## ✨ What we learned
 We learnt how to utilize mediapipe and use it as the core technology for our project. We learnt about how to manipulate the different points of the body to accurately use these quantifiers to assess the posture and other key metrics of presenters, such as facial expression and hand gestures. We also took the time to learn more about taipy and use it to power our front end, building a beautiful user friendly interface that displays a video feed through the user's webcam.
