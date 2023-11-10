@@ -115,7 +115,7 @@ with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as
                 else:
                     frames_since_gesture += 1
 
-            if frames_since_gesture > 45:
+            if frames_since_gesture > 40:
                 cv2.putText(image, "MOVE YOUR HANDS",
                             tuple(np.multiply([wrist_left[0], wrist_left[1]], [640, 480]).astype(int)),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 250), 2, cv2.LINE_AA
@@ -158,7 +158,7 @@ with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as
                 knee = (landmarks[25].z + landmarks[26].z) / 2
                 # print("knee =", knee)
 
-                if abs(shoulder) / abs(waist) > 300:
+                if abs(shoulder) / abs(waist) > 400:
                     print("shoulders slouched! SLOUCHER! FOUND THE SLOUCHER!")
                     cv2.putText(image, "STAND UP STRAIGHT!",
                                 tuple(np.multiply([shoulder_left[0], shoulder_left[1]], [640, 480]).astype(int)),
@@ -208,7 +208,7 @@ with mp_pose.Pose(min_detection_confidence=0.50, min_tracking_confidence=0.5) as
             cv2.rectangle(image, (0, 0), (250, 60), (245, 117, 16), -1)
 
             # Display Class
-            if body_language_prob[np.argmax(body_language_prob)] > 0.5:
+            if body_language_prob[np.argmax(body_language_prob)] > 0.7:
                 cv2.putText(image, 'CLASS', (95, 12),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
                 cv2.putText(image, body_language_class.split(' ')[0], (90, 40),
